@@ -30,6 +30,15 @@ describe('planRefund', () => {
     ])
   })
 
+  it('rounds each line to the nearest minor unit, and the lines add up to the refund', () => {
+    const plan = planRefund(twoLines, 1001, [])
+    expect(plan.lines).toEqual([
+      { lineId: 'a', amount: 250 },
+      { lineId: 'b', amount: 751 },
+    ])
+    expect(plan.lines.reduce((acc, line) => acc + line.amount, 0)).toBe(plan.total)
+  })
+
   it('refunds every line in full when the whole order is refunded', () => {
     expect(planRefund(twoLines, 4000, []).lines).toEqual([
       { lineId: 'a', amount: 1000 },

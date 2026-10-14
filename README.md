@@ -44,7 +44,8 @@ pnpm start
 
 | Variable | Required | What |
 |---|---|---|
-| `SESSION_SECRET` | yes | signs session tokens; at least 32 characters |
+| `SESSION_SECRET` | unless `SESSION_KEYS` is set | signs session tokens; at least 32 characters |
+| `SESSION_KEYS` | no | `id:secret` pairs separated by commas, current key first, each secret at least 32 characters. To rotate, put a new key first and keep the old one after it until its tokens have expired |
 | `SESSION_TTL_SECONDS` | no | session lifetime, default 3600 |
 | `OPERATOR_KEYS` | yes | `id:sha256hex` pairs separated by commas: each operator's id and the SHA-256 of their API key |
 | `PAYMENTS_BASE_URL` | yes | the payment provider's API |

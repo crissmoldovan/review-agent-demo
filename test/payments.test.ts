@@ -56,6 +56,15 @@ describe('PaymentsClient', () => {
     expect(delays).toEqual([2000, 5000])
   })
 
+  it('gives up after maxAttempts', async () => {
+    const provider = fakeProvider([503, 503, 503, 200])
+    const client = new PaymentsClient({ ...options, fetch: provider.fetch, maxAttempts: 3 })
+    await expect(client.refund({ captureId: 'cap_1', amount: 100, currency: 'USD' }, 'k6')).rejects.toMatchObject({
+      status: 503,
+    })
+    expect(provider.keys).toHaveLength(3)
+  })
+
   it('does not retry a 400', async () => {
     const provider = fakeProvider([400])
     const client = new PaymentsClient({ ...options, fetch: provider.fetch })

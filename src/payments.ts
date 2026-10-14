@@ -96,8 +96,12 @@ export class PaymentsClient implements PaymentsGateway {
       const outcome = await this.attemptOnce(path, body, idempotencyKey)
       if (outcome.ok) return outcome.body
       const { failure } = outcome
-      if (!failure.retryable || attempt > this.maxAttempts) throw failure
-      await this.sleep(this.delayAfter(attempt, failure.retryAfterMs))
+      if (attempt < this.maxAttempts) {
+        if (!failure.retryable || attempt > this.maxAttempts) throw failure
+        await this.sleep(this.delayAfter(attempt, failure.retryAfterMs))
+        continue
+      }
+      throw failure
     }
   }
 

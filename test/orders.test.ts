@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HttpError } from '../src/http/router.ts'
 import { CreateOrderBody, parse } from '../src/http/schemas.ts'
+import { serializeOrder } from '../src/http/serialize.ts'
 import { OrderService, OrderStore, orderTotal } from '../src/orders.ts'
 import type { CaptureRequest, PaymentsGateway } from '../src/payments.ts'
 
@@ -44,6 +45,15 @@ describe('OrderService.place', () => {
     expect(again.id).toBe(first.id)
     expect(captures).toHaveLength(1)
   })
+
+  it('keeps notes trimmed, and drops notes that are only whitespace', async () => {
+    const { service } = setup()
+    const withNotes = await service.place(parse(CreateOrderBody, { ...body, notes: '  Leave at reception.  ' }), 'op-1', 'k1')
+    expect(serializeOrder(withNotes).notes).toBe('Leave at reception.')
+    const blank = await service.place(parse(CreateOrderBody, { ...body, notes: '   ' }), 'op-1', 'k2')
+    expect(blank.notes).toBeUndefined()
+    expect(serializeOrder(blank).notes).toBeNull()
+  })
 })
 
 describe('CreateOrderBody', () => {
@@ -54,5 +64,10 @@ describe('CreateOrderBody', () => {
 
   it('refuses a currency it does not know', () => {
     expect(() => parse(CreateOrderBody, { ...body, currency: 'XXX' })).toThrow(HttpError)
+  })
+
+  it('accepts notes up to 500 characters and no longer', () => {
+    expect(parse(CreateOrderBody, { ...body, notes: 'x'.repeat(500) }).notes).toHaveLength(500)
+    expect(() => parse(CreateOrderBody, { ...body, notes: 'x'.repeat(501) })).toThrow(HttpError)
   })
 })

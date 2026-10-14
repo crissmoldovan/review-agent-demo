@@ -1,15 +1,19 @@
+import { formatMoney } from '../format.ts'
 import { type Order, lineTotal, orderTotal } from '../orders.ts'
 import type { Refund } from '../refunds.ts'
 
 // Every amount in a response is a whole number of the currency's minor unit, as in requests.
+// `totalDisplay` is the same total formatted for people, so the console does not format money itself.
 
 export function serializeOrder(order: Order) {
+  const total = orderTotal(order)
   return {
     id: order.id,
     customerId: order.customerId,
     status: order.status,
     currency: order.currency,
-    total: orderTotal(order).amount,
+    total: total.amount,
+    totalDisplay: formatMoney(total),
     lines: order.lines.map((line) => ({
       id: line.id,
       sku: line.sku,

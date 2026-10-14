@@ -8,6 +8,9 @@ provider, and operators refund them in full or in part. TypeScript on Node.js 22
 real pull requests. It is small on purpose, it is not production software, and everything it stores lives in memory
 and is gone when the process stops. The payment provider it calls is fictional.
 
+The pull requests opened against it, and what a careful review of each should find, are in
+[PULL_REQUESTS.md](PULL_REQUESTS.md). That file is on `main` only, never on a pull request's branch.
+
 ## Endpoints
 
 | Method and path | What it does |

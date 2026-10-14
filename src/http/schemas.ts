@@ -27,6 +27,7 @@ export const CreateOrderBody = z.strictObject({
     )
     .min(1)
     .max(100),
+  notes: z.string().trim().max(500).optional(),
 })
 
 export const CreateRefundBody = z.strictObject({

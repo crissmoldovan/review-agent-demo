@@ -17,6 +17,7 @@ export function serializeOrder(order: Order) {
       unitPrice: line.unitPrice.amount,
       total: lineTotal(line).amount,
     })),
+    notes: order.notes ?? null,
     createdBy: order.createdBy,
     createdAt: order.createdAt,
   }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { Idempotency } from './idempotency.ts'
-import { type Currency, allocate } from './money.ts'
+import type { Currency } from './money.ts'
 import { type Order, type OrderStore, lineTotal, orderTotal } from './orders.ts'
 import type { PaymentsGateway } from './payments.ts'
 
@@ -54,7 +54,11 @@ export function planRefund(order: Order, amount: number, previous: readonly Refu
   }
 
   const remaining = order.lines.map((line) => lineTotal(line).amount - refundedForLine(line.id, previous))
-  const shares = allocate(amount, remaining)
+  const outstanding = remaining.reduce((a, b) => a + b, 0)
+  // Each line gets its own proportional share, rounded to the nearest minor unit, so finance can
+  // recompute any line's refund from that line alone: round(amount * remaining / outstanding).
+  // The rounding differences cancel out across the lines.
+  const shares = remaining.map((left) => Math.round((amount * left) / outstanding))
 
   return {
     total: amount,

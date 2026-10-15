@@ -1,3 +1,5 @@
+import type { Keyring, SessionKey } from './sessions.ts'
+
 export interface Operator {
   readonly id: string
   /** SHA-256 of the operator's API key. The key itself is never configured here. */
@@ -6,6 +8,9 @@ export interface Operator {
 
 export interface Config {
   readonly port: number
+  /** Signs new session tokens and verifies tokens signed before a rotation. */
+  readonly sessionKeys: Keyring
+  /** @deprecated The current key's secret. Use `sessionKeys`. */
   readonly sessionSecret: string
   readonly sessionTtlSeconds: number
   readonly operators: readonly Operator[]
@@ -13,12 +18,14 @@ export interface Config {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const sessionSecret = required(env, 'SESSION_SECRET')
-  if (sessionSecret.length < 32) throw new Error('SESSION_SECRET must be at least 32 characters')
+  const sessionKeys: Keyring = env.SESSION_KEYS
+    ? parseSessionKeys(env.SESSION_KEYS)
+    : { current: { id: 'default', secret: longSecret('SESSION_SECRET', required(env, 'SESSION_SECRET')) }, previous: [] }
 
   return {
     port: positiveInteger(env, 'PORT', 3000),
-    sessionSecret,
+    sessionKeys,
+    sessionSecret: sessionKeys.current.secret,
     sessionTtlSeconds: positiveInteger(env, 'SESSION_TTL_SECONDS', 3600),
     operators: parseOperators(required(env, 'OPERATOR_KEYS')),
     payments: {
@@ -26,6 +33,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       apiKey: required(env, 'PAYMENTS_API_KEY'),
     },
   }
+}
+
+/** `SESSION_KEYS` is `id:secret` pairs separated by commas, the current key first. */
+export function parseSessionKeys(value: string): Keyring {
+  const keys = value.split(',').map((entry): SessionKey => {
+    const separator = entry.indexOf(':')
+    const id = entry.slice(0, separator).trim()
+    if (separator < 1 || !/^[\w-]+$/.test(id)) {
+      throw new Error('SESSION_KEYS entries must look like "<id>:<secret>", the id letters, digits, - or _')
+    }
+    return { id, secret: longSecret('SESSION_KEYS', entry.slice(separator + 1).trim()) }
+  })
+  if (new Set(keys.map((key) => key.id)).size !== keys.length) throw new Error('SESSION_KEYS has a repeated id')
+  const [current, ...previous] = keys
+  return { current, previous }
 }
 
 /** `OPERATOR_KEYS` is `id:sha256hex` pairs separated by commas. */
@@ -43,6 +65,11 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]
   if (!value) throw new Error(`${name} is not set`)
   return value
+}
+
+function longSecret(name: string, secret: string): string {
+  if (secret.length < 32) throw new Error(`${name}: every secret must be at least 32 characters`)
+  return secret
 }
 
 function positiveInteger(env: NodeJS.ProcessEnv, name: string, fallback: number): number {

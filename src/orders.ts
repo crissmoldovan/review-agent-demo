@@ -19,6 +19,8 @@ export interface Order {
   readonly lines: readonly OrderLine[]
   readonly captureId: string
   readonly status: OrderStatus
+  /** Free text from the operator, for example a delivery instruction. */
+  readonly notes?: string
   readonly createdBy: string
   readonly createdAt: string
 }
@@ -29,6 +31,7 @@ export interface NewOrder {
   /** The payment the checkout already authorised with the provider. */
   readonly paymentId: string
   readonly lines: ReadonlyArray<{ readonly sku: string; readonly quantity: number; readonly unitPrice: number }>
+  readonly notes?: string
 }
 
 export function lineTotal(line: OrderLine): Money {
@@ -95,6 +98,8 @@ export class OrderService {
         lines,
         captureId,
         status: 'paid',
+        // The schema trims notes, so an empty string here was only whitespace: not worth keeping.
+        notes: input.notes || undefined,
         createdBy,
         createdAt: this.now().toISOString(),
       }
